@@ -378,10 +378,8 @@ app.delete('/api/results/reset/:playerId', (req, res) => {
   });
 });
 
-// --- 【新增代码块 2】---
-// SPA "兜底" 路由。这个必须放在所有 API 路由之后！
-// 它匹配所有未被 API 路由捕获的 GET 请求。
-app.get('*', (req, res) => {
+// SPA "兜底" 路由 - 修正后的兼容性写法
+app.get(/^(?!\/api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
