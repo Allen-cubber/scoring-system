@@ -1,0 +1,242 @@
+### ========================================
+### 测试评分项 API
+### ========================================
+
+### (1) 添加第一个评分项: 技术表现
+POST http://localhost:3000/api/scoring-items
+Content-Type: application/json
+
+{
+  "name": "技术表现",
+  "description": "考察选手的基本功、技巧和完成度。",
+  "max_score": 50
+}
+
+### (2) 添加第二个评分项: 艺术感染力
+POST http://localhost:3000/api/scoring-items
+Content-Type: application/json
+
+{
+  "name": "艺术感染力",
+  "description": "考察作品的情感表达和舞台魅力。",
+  "max_score": 40
+}
+
+### (3) 添加第三个评分项: 创新性
+POST http://localhost:3000/api/scoring-items
+Content-Type: application/json
+
+{
+  "name": "创新性",
+  "max_score": 10
+}
+
+### (4) 获取所有评分项
+GET http://localhost:3000/api/scoring-items
+
+### (5) 获取所有选手
+GET http://localhost:3000/api/players
+
+### ========================================
+### 测试实时评分流程
+### 假设我们之前已经添加了评分项，并导入了ID为1,2,3...的选手
+### ========================================
+
+### (A) 管理员：开始为 1 号选手评分
+POST http://localhost:3000/api/live/start/1
+
+### (B) 评委端：获取当前该给谁评分
+# 多点几次这个请求，应该能看到 1 号选手的信息和所有评分项
+GET http://localhost:3000/api/live/current
+
+### (C) 评委1：为 1 号选手提交分数
+# 假设我们有2个评分项，ID分别为 1 和 2
+POST http://localhost:3000/api/scores
+Content-Type: application/json
+
+{
+  "playerId": 1,
+  "judgeId": "judge-abc-123",
+  "scores": [
+    { "itemId": 1, "score": 45 },
+    { "itemId": 2, "score": 38 },
+    { "itemId": 3, "score": 9 }
+  ]
+}
+
+### (D) 评委2：为 1 号选手提交分数
+POST http://localhost:3000/api/scores
+Content-Type: application/json
+
+{
+  "playerId": 1,
+  "judgeId": "judge-xyz-789",
+  "scores": [
+    { "itemId": 1, "score": 48 },
+    { "itemId": 2, "score": 35 },
+    { "itemId": 3, "score": 8 }
+  ]
+}
+
+### (E) 管理员：停止为 1 号选手评分
+POST http://localhost:3000/api/live/stop
+
+### (F) 评委端：再次获取当前该给谁评分
+# 此时应该返回空数据了，因为管理员已经停止了评分
+GET http://localhost:3000/api/live/current
+
+### ========================================
+### 测试最终排名
+### ========================================
+
+### (G) 管理员：获取实时排名和统计数据
+GET http://localhost:3000/api/results
+
+### ========================================
+### 基础数据准备 (如果需要)
+### ========================================
+
+### 导入选手 (只需执行一次)
+# @name importPlayers
+POST http://localhost:3000/api/players/import
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="playersFile"; filename="players.csv"
+Content-Type: text/csv
+
+张三,"歌手"
+李四,"舞者"
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+
+### ========================================
+### 1. 评分组 (Scoring Sets) 管理测试
+### ========================================
+
+### (1.1) 添加第一个评分组: 就业赛道
+# @name addSet1
+POST http://localhost:3000/api/scoring-sets
+Content-Type: application/json
+
+{
+  "name": "就业赛道"
+}
+
+### (1.2) 添加第二个评分组: 成长赛道
+# @name addSet2
+POST http://localhost:3000/api/scoring-sets
+Content-Type: application/json
+
+{
+  "name": "成长赛道"
+}
+
+### (1.3) 获取所有评分组
+# @name getSets
+GET http://localhost:3000/api/scoring-sets
+
+
+### ========================================
+### 2. 评分项 (Scoring Items) 管理测试
+### 假设 "就业赛道" 的 ID 是 1, "成长赛道" 的 ID 是 2
+### ========================================
+
+### (2.1) 为 "就业赛道" (ID=1) 添加评分项
+# @name addJobItem1
+POST http://localhost:3000/api/scoring-sets/1/items
+Content-Type: application/json
+
+{
+  "name": "职业目标",
+  "description": "考察职业规划的清晰度和可行性。",
+  "max_score": 50
+}
+
+### (2.2) 再次为 "就业赛道" (ID=1) 添加评分项
+# @name addJobItem2
+POST http://localhost:3000/api/scoring-sets/1/items
+Content-Type: application/json
+
+{
+  "name": "实践能力",
+  "description": "考察实习和项目经验。",
+  "max_score": 50
+}
+
+### (2.3) 为 "成长赛道" (ID=2) 添加评分项
+# @name addGrowItem1
+POST http://localhost:3000/api/scoring-sets/2/items
+Content-Type: application/json
+
+{
+  "name": "学习能力",
+  "description": "考察持续学习和自我提升的潜力。",
+  "max_score": 100
+}
+
+### (2.4) 获取 "就业赛道" (ID=1) 的所有评分项
+# 期望看到 "职业目标" 和 "实践能力"
+# @name getJobItems
+GET http://localhost:3000/api/scoring-sets/1/items
+
+### (2.5) 获取 "成长赛道" (ID=2) 的所有评分项
+# 期望只看到 "学习能力"
+# @name getGrowItems
+GET http://localhost:3000/api/scoring-sets/2/items
+
+
+### ========================================
+### 3. 实时评分流程测试
+### ========================================
+
+### (3.1) 管理员：激活 "就业赛道" (ID=1) 作为本次比赛的评分标准
+# @name setActiveSet
+POST http://localhost:3000/api/live/set-active/1
+
+### (3.2) 管理员：开始为 1 号选手 "张三" 评分
+# @name startPlayer1
+POST http://localhost:3000/api/live/start/1
+
+### (3.3) 评委端：获取当前应评分的选手和评分项
+# @name getCurrentForJudge
+# 【验证重点】期望看到选手 "张三"，并且 scoringItems 数组里是 "职业目标" 和 "实践能力"
+GET http://localhost:3000/api/live/current
+
+### (3.4) 评委端：提交分数
+# @name submitScore
+POST http://localhost:3000/api/scores
+Content-Type: application/json
+
+{
+  "playerId": 1,
+  "judgeId": "judge-test-001",
+  "scores": [
+    { "itemId": 1, "score": 45 },
+    { "itemId": 2, "score": 48 }
+  ]
+}
+
+### (3.5) 管理员：停止评分
+# @name stopScoring
+POST http://localhost:3000/api/live/stop
+
+### (3.6) 评委端：再次获取信息
+# @name getCurrentAfterStop
+# 期望返回 player: null
+GET http://localhost:3000/api/live/current
+
+
+### ========================================
+### 4. 删除功能测试
+### ========================================
+
+### (4.1) 删除 "成长赛道" (ID=2) 这个评分组
+# @name deleteSet2
+# 执行后，其下的 "学习能力" 评分项也应该被自动删除
+DELETE http://localhost:3000/api/scoring-sets/2
+
+### (4.2) 再次获取所有评分组
+# @name getSetsAfterDelete
+# 期望只看到 "就业赛道"
+GET http://localhost:3000/api/scoring-sets
