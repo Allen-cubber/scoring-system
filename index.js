@@ -6,6 +6,7 @@ const multer = require('multer');
 const fs = require('fs');
 const csv = require('csv-parser');
 const db = require('./database.js');
+const xlsx = require('xlsx');
 
 // 2. 全局状态变量
 let currentScoringPlayerId = null;
@@ -158,30 +159,56 @@ app.post('/api/players', (req, res) => {
   });
 });
 
-// 批量导入选手 (上传CSV文件)
+// 批量导入选手 (上传Excel文件) - 升级版
 app.post('/api/players/import', upload.single('playersFile'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: '没有上传文件' });
   }
-  const results = [];
+
   const filePath = req.file.path;
-  fs.createReadStream(filePath)
-    .pipe(csv({ headers: ['name', 'info'] }))
-    .on('data', (data) => results.push(data))
-    .on('end', () => {
-      const sql = `INSERT INTO players (name, info) VALUES (?, ?)`;
-      db.serialize(() => {
-        db.run("BEGIN TRANSACTION;");
-        results.forEach(player => {
-          if (player.name) {
-            db.run(sql, [player.name, player.info]);
-          }
-        });
-        db.run("COMMIT;");
-      });
-      fs.unlinkSync(filePath);
-      res.status(201).json({ message: '选手导入成功', count: results.length });
+  let players = [];
+
+  try {
+    // 1. 使用 xlsx 库读取上传的文件
+    const workbook = xlsx.readFile(filePath);
+    
+    // 2. 获取第一个工作表 (Sheet) 的名称
+    const sheetName = workbook.SheetNames[0];
+    
+    // 3. 获取该工作表
+    const sheet = workbook.Sheets[sheetName];
+    
+    // 4. 将工作表内容转换为 JSON 数组
+    //    我们假设 Excel 文件没有表头，A列是姓名，B列是简介
+    players = xlsx.utils.sheet_to_json(sheet, { header: ['name', 'info'] });
+
+  } catch (error) {
+    console.error("解析Excel文件失败:", error);
+    // 删除临时文件
+    fs.unlinkSync(filePath);
+    return res.status(500).json({ error: '解析Excel文件失败，请确保文件格式正确。' });
+  }
+
+  // 5. 将解析出的数据存入数据库 (这部分逻辑和之前一样)
+  const sql = `INSERT INTO players (name, info) VALUES (?, ?)`;
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION;");
+    players.forEach(player => {
+      // 确保 name 字段存在且不为空
+      if (player.name && player.name.toString().trim() !== '') {
+        db.run(sql, [player.name, player.info || '']); // 如果info不存在，则存入空字符串
+      }
     });
+    db.run("COMMIT;");
+  });
+
+  // 6. 删除临时的上传文件
+  fs.unlinkSync(filePath);
+
+  res.status(201).json({ 
+    message: '选手导入成功',
+    count: players.length 
+  });
 });
 
 // 获取所有选手列表
