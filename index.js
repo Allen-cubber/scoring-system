@@ -66,6 +66,93 @@ app.delete('/api/scoring-sets/:id', (req, res) => {
   });
 });
 
+// 【新增】API: 批量导入评分组和评分项
+app.post('/api/scoring-sets/import', upload.single('scoringFile'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: '没有上传文件' });
+  }
+
+  const filePath = req.file.path;
+  let importedRows = [];
+
+  try {
+    const workbook = xlsx.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    // 将Excel转换为JSON，指定表头映射
+    importedRows = xlsx.utils.sheet_to_json(sheet, { 
+      header: ['setName', 'itemName', 'description', 'maxScore'] 
+    });
+
+  } catch (error) {
+    fs.unlinkSync(filePath);
+    return res.status(500).json({ error: '解析Excel文件失败' });
+  }
+
+  // 核心逻辑：处理数据并存入数据库
+  try {
+    // 使用一个Map来缓存已经找到或创建的评分组ID，避免重复查询数据库
+    const groupCache = new Map();
+
+    // 封装一个函数，用于获取或创建评分组ID
+    const getOrCreateSetId = (name) => {
+      return new Promise((resolve, reject) => {
+        if (groupCache.has(name)) {
+          return resolve(groupCache.get(name));
+        }
+        // 1. 先尝试查找
+        db.get('SELECT id FROM scoring_sets WHERE name = ?', [name], function(err, row) {
+          if (err) return reject(err);
+          if (row) { // 找到了
+            groupCache.set(name, row.id);
+            resolve(row.id);
+          } else { // 没找到，创建新的
+            db.run('INSERT INTO scoring_sets (name) VALUES (?)', [name], function(err) {
+              if (err) return reject(err);
+              const newId = this.lastID;
+              groupCache.set(name, newId);
+              resolve(newId);
+            });
+          }
+        });
+      });
+    };
+
+    // 开启事务
+    db.run("BEGIN TRANSACTION;");
+
+    // 遍历所有行
+    for (const row of importedRows) {
+      if (row.setName && row.itemName && row.maxScore) {
+        // 获取或创建评分组ID
+        const setId = await getOrCreateSetId(row.setName);
+        
+        // 插入评分项
+        const itemSql = `INSERT INTO scoring_items (name, description, max_score, set_id) VALUES (?, ?, ?, ?)`;
+        // 使用 db.run 的回调来捕获可能的错误
+        await new Promise((resolve, reject) => {
+          db.run(itemSql, [row.itemName, row.description || '', row.maxScore, setId], (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      }
+    }
+
+    // 提交事务
+    db.run("COMMIT;");
+
+    fs.unlinkSync(filePath);
+    res.status(201).json({ message: `导入成功，共处理 ${importedRows.length} 行数据。`, count: importedRows.length });
+
+  } catch (error) {
+    db.run("ROLLBACK;"); // 如果任何一步出错，回滚所有操作
+    fs.unlinkSync(filePath);
+    console.error("导入评分项数据库操作失败:", error);
+    res.status(500).json({ error: '数据库操作失败，请检查文件内容是否合规。' });
+  }
+});
+
 /*
 ================================================
  API: 评分项管理 (Scoring Items) - 已升级
