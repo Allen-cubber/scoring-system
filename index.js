@@ -1,26 +1,35 @@
+// 1. 引入所有必要的模块
 const path = require('path');
 const express = require('express');
-const cors = require('cors');
+const cors = require('cors'); // 引入 cors
 const multer = require('multer');
 const fs = require('fs');
-const xlsx = require('xlsx');
+const csv = require('csv-parser');
 const db = require('./database.js');
+const xlsx = require('xlsx');
 
-// 全局状态变量
+// 2. 全局状态变量
 let currentScoringPlayerId = null;
-let activeScoringSetId = null;
 
-// 初始化 Express 应用
+// 3. 初始化 Express 应用
 const app = express();
 const PORT = 3000;
 
-// 中间件配置
-app.use(cors());
-app.use(express.json());
+// 4. 【核心修复】配置并使用中间件
+// 确保 cors() 在所有路由之前被调用，这是解决 DELETE/PUT 问题的关键！
+app.use(cors()); 
+
+// 解析 JSON 格式的请求体
+app.use(express.json()); 
+
+// --- 【新增代码块 1】---
+// 托管前端静态文件。这行代码告诉 Express，
+// dist 文件夹是公开的，里面的文件可以直接通过 URL 访问。
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// 配置 multer 用于文件上传
 const upload = multer({ dest: 'uploads/' });
 
-// 托管前端静态文件
-app.use(express.static(path.join(__dirname, 'dist')));
 /*
 ================================================
  API: 评分组管理 (Scoring Sets)
@@ -482,8 +491,6 @@ app.delete('/api/results/reset/:playerId', (req, res) => {
     });
   });
 });
-
-app.use('/api', apiRouter);
 
 // SPA "兜底" 路由 - 修正后的兼容性写法
 app.get(/^(?!\/api).*/, (req, res) => {
