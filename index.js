@@ -1,35 +1,105 @@
 // 1. 引入所有必要的模块
 const path = require('path');
 const express = require('express');
-const cors = require('cors'); // 引入 cors
+const cors = require('cors');
 const multer = require('multer');
 const fs = require('fs');
-const csv = require('csv-parser');
-const db = require('./database.js');
 const xlsx = require('xlsx');
+const db = require('./database.js');
 
-// 2. 全局状态变量
+// 【新增】引入 session 和 body-parser
+const session = require('express-session');
+const bodyParser = require('body-parser');
+
+// 2. 全局状态变量和配置
 let currentScoringPlayerId = null;
+let activeScoringSetId = null;
+const ADMIN_PASSWORD = "zzxzzx"; // 🔴 在这里设置您的后台安全密码！
 
 // 3. 初始化 Express 应用
 const app = express();
 const PORT = 3000;
 
-// 4. 【核心修复】配置并使用中间件
-// 确保 cors() 在所有路由之前被调用，这是解决 DELETE/PUT 问题的关键！
-app.use(cors()); 
+// 4. 配置并使用中间件
+app.use(cors());
+app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: false })); // 解析表单数据
 
-// 解析 JSON 格式的请求体
-app.use(express.json()); 
+// 【新增】Session 配置
+app.use(session({
+  secret: 'a_very_secret_key_for_session_12345', // 🔴 建议替换成一个更复杂的随机字符串
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: false, // 在本地开发和非HTTPS部署时必须为 false
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24 // Session 有效期: 24小时
+  }
+}));
 
-// --- 【新增代码块 1】---
-// 托管前端静态文件。这行代码告诉 Express，
-// dist 文件夹是公开的，里面的文件可以直接通过 URL 访问。
+// 托管前端静态文件
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // 配置 multer 用于文件上传
 const upload = multer({ dest: 'uploads/' });
 
+/*
+================================================
+ API: 认证 (Authentication) - 【新增模块】
+================================================
+*/
+// 登录 API (公开访问)
+app.post('/api/login', (req, res) => {
+  const { password } = req.body;
+  if (password === ADMIN_PASSWORD) {
+    req.session.loggedIn = true; // 在 session 中标记为已登录
+    res.status(200).json({ message: "登录成功" });
+  } else {
+    res.status(401).json({ error: "密码错误" });
+  }
+});
+
+// 登出 API (需要登录后才能访问)
+app.post('/api/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) return res.status(500).json({ error: "登出失败" });
+    res.clearCookie('connect.sid'); // 清除浏览器中的 session cookie
+    res.status(200).json({ message: "已成功登出" });
+  });
+});
+
+// 检查登录状态 API (公开访问)
+app.get('/api/check-login', (req, res) => {
+    if (req.session.loggedIn) {
+        res.status(200).json({ loggedIn: true });
+    } else {
+        res.status(200).json({ loggedIn: false });
+    }
+});
+
+/*
+================================================
+ 安全中间件 (Security Middleware) - 【新增模块】
+================================================
+*/
+const authMiddleware = (req, res, next) => {
+  // 定义一些即使在 /api 路径下也需要公开访问的接口
+  const publicApiPaths = ['/live/current', '/scores'];
+
+  if (publicApiPaths.some(path => req.path.startsWith(path))) {
+    return next(); // 如果是评委端需要的接口，直接放行
+  }
+  
+  if (req.session.loggedIn) {
+    next(); // 已登录，放行
+  } else {
+    res.status(401).json({ error: '未经授权，请先登录' }); // 未登录，拒绝访问
+  }
+};
+
+// 【核心】将安全中间件应用到所有 /api 路径下的路由
+// 注意：这个必须放在认证API之后，在所有受保护的API之前
+app.use('/api', authMiddleware);
 /*
 ================================================
  API: 评分组管理 (Scoring Sets)
