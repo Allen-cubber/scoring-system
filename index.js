@@ -44,7 +44,7 @@ const apiRouter = express.Router();
 ================================================
 */
 // 登录接口
-app.post('/api/login', (req, res) => {
+apiRouter.post('/login', (req, res) => {
   const { password } = req.body;
   if (password === ADMIN_PASSWORD) {
     req.session.loggedIn = true;
@@ -55,7 +55,7 @@ app.post('/api/login', (req, res) => {
 });
 
 // 检查登录状态接口
-app.get('/api/check-login', (req, res) => {
+apiRouter.get('/check-login', (req, res) => {
   res.status(200).json({ loggedIn: !!req.session.loggedIn });
 });
 
