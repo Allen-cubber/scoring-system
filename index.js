@@ -433,6 +433,49 @@ app.post('/api/scores', (req, res) => {
   });
 });
 
+// 【新增】API: 根据 judgeId 获取评委的打分记录
+app.get('/api/my-scores', (req, res) => {
+  const { judgeId } = req.query; // 从查询参数中获取 judgeId
+
+  if (!judgeId) {
+    return res.status(400).json({ error: "必须提供 judgeId" });
+  }
+
+  // SQL 查询关联三张表：scores, players, scoring_items
+  const sql = `
+    SELECT
+      p.name AS playerName,
+      si.name AS itemName,
+      s.score
+    FROM scores s
+    JOIN players p ON s.player_id = p.id
+    JOIN scoring_items si ON s.item_id = si.id
+    WHERE s.judge_id = ?
+    ORDER BY p.id, si.id;
+  `;
+
+  db.all(sql, [judgeId], (err, rows) => {
+    if (err) {
+      console.error("查询打分记录失败:", err.message);
+      return res.status(500).json({ error: "数据库查询失败" });
+    }
+    
+    // 将查询结果按选手名格式化，方便前端展示
+    const formattedResults = {};
+    rows.forEach(row => {
+      if (!formattedResults[row.playerName]) {
+        formattedResults[row.playerName] = [];
+      }
+      formattedResults[row.playerName].push({
+        itemName: row.itemName,
+        score: row.score
+      });
+    });
+
+    res.json({ message: "success", data: formattedResults });
+  });
+});
+
 /*
 ================================================
  API: 数据统计与排名 (Results & Ranking)
