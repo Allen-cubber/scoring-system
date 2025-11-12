@@ -1,4 +1,3 @@
-// 1. 引入所有必要的模块
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
@@ -6,129 +5,22 @@ const multer = require('multer');
 const fs = require('fs');
 const xlsx = require('xlsx');
 const db = require('./database.js');
-const session = require('express-session');
-const bodyParser = require('body-parser');
 
-// 2. 全局状态变量和配置
+// 全局状态变量
 let currentScoringPlayerId = null;
 let activeScoringSetId = null;
-const ADMIN_PASSWORD = "admin"; // 🔴 在这里设置您的后台安全密码！
 
-// 3. 初始化 Express 应用
+// 初始化 Express 应用
 const app = express();
 const PORT = 3000;
 
-// 4. 配置并使用中间件
+// 中间件配置
 app.use(cors());
 app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(session({
-  secret: 'a_very_secret_key_for_session_12345', // 🔴 建议替换成一个更复杂的随机字符串
-  resave: false,
-  saveUninitialized: false,
-  cookie: { 
-    secure: false, 
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24 // Session 有效期: 24小时
-  }
-}));
-app.use(express.static(path.join(__dirname, 'dist')));
 const upload = multer({ dest: 'uploads/' });
 
-// --- 创建一个 API 主路由 ---
-const apiRouter = express.Router();
-
-/*
-================================================
- 1. 公开访问的 API (不需要登录)
-================================================
-*/
-// 登录接口
-apiRouter.post('/login', (req, res) => {
-  const { password } = req.body;
-  if (password === ADMIN_PASSWORD) {
-    req.session.loggedIn = true;
-    res.status(200).json({ message: "登录成功" });
-  } else {
-    res.status(401).json({ error: "密码错误" });
-  }
-});
-
-// 检查登录状态接口
-apiRouter.get('/check-login', (req, res) => {
-  res.status(200).json({ loggedIn: !!req.session.loggedIn });
-});
-
-// 评委端获取当前评分信息接口
-apiRouter.get('/live/current', (req, res) => {
-  if (!currentScoringPlayerId || !activeScoringSetId || activeScoringSetId === '0') {
-    return res.json({ player: null, scoringItems: [] });
-  }
-  const playerSql = "SELECT * FROM players WHERE id = ?";
-  const itemsSql = "SELECT * FROM scoring_items WHERE set_id = ?";
-  db.get(playerSql, [currentScoringPlayerId], (err, player) => {
-    if (err || !player) return res.json({ player: null, scoringItems: [] });
-    db.all(itemsSql, [activeScoringSetId], (err, items) => {
-      if (err) return res.json({ player: player, scoringItems: [] });
-      res.json({ player, scoringItems: items });
-    });
-  });
-});
-
-// 评委端提交分数接口
-apiRouter.post('/scores', (req, res) => {
-  const { playerId, scores, judgeId } = req.body;
-  if (!playerId || !scores || !Array.isArray(scores) || !judgeId) return res.status(400).json({ error: '请求数据格式不正确' });
-  if (playerId.toString() !== currentScoringPlayerId) return res.status(403).json({ error: '该选手当前的评分通道已关闭' });
-
-  const deleteSql = 'DELETE FROM scores WHERE player_id = ? AND judge_id = ?';
-  const insertSql = `INSERT INTO scores (player_id, item_id, score, judge_id) VALUES (?, ?, ?, ?)`;
-
-  db.serialize(() => {
-    db.run("BEGIN TRANSACTION;");
-    db.run(deleteSql, [playerId, judgeId]);
-    scores.forEach(item => {
-      db.run(insertSql, [playerId, item.itemId, item.score, judgeId]);
-    });
-    db.run("COMMIT;", (err) => {
-      if (err) {
-        db.run("ROLLBACK;");
-        return res.status(500).json({ error: "评分提交失败，请重试" });
-      }
-      res.status(201).json({ message: '评分提交/更新成功！' });
-    });
-  });
-});
-
-/*
-================================================
- 2. 安全中间件 (保护下面的所有路由)
-================================================
-*/
-const authMiddleware = (req, res, next) => {
-  if (req.session.loggedIn) {
-    next();
-  } else {
-    res.status(401).json({ error: '未经授权，请先登录' });
-  }
-};
-
-// 将安全中间件应用到所有后续的 apiRouter 路由上
-apiRouter.use(authMiddleware);
-
-/*
-================================================
- 3. 受保护的 API (需要登录才能访问)
-================================================
-*/
-// 登出
-apiRouter.post('/logout', (req, res) => {
-  req.session.destroy(err => {
-    if (err) return res.status(500).json({ error: "登出失败" });
-    res.clearCookie('connect.sid');
-    res.status(200).json({ message: "已成功登出" });
-  });
-});
+// 托管前端静态文件
+app.use(express.static(path.join(__dirname, 'dist')));
 /*
 ================================================
  API: 评分组管理 (Scoring Sets)
