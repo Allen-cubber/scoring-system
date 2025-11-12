@@ -6,15 +6,13 @@ const multer = require('multer');
 const fs = require('fs');
 const xlsx = require('xlsx');
 const db = require('./database.js');
-
-// 【新增】引入 session 和 body-parser
 const session = require('express-session');
 const bodyParser = require('body-parser');
 
 // 2. 全局状态变量和配置
 let currentScoringPlayerId = null;
 let activeScoringSetId = null;
-const ADMIN_PASSWORD = "zzxzzx"; // 🔴 在这里设置您的后台安全密码！
+const ADMIN_PASSWORD = "admin"; // 🔴 在这里设置您的后台安全密码！
 
 // 3. 初始化 Express 应用
 const app = express();
@@ -23,83 +21,114 @@ const PORT = 3000;
 // 4. 配置并使用中间件
 app.use(cors());
 app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: false })); // 解析表单数据
-
-// 【新增】Session 配置
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(session({
   secret: 'a_very_secret_key_for_session_12345', // 🔴 建议替换成一个更复杂的随机字符串
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: false, // 在本地开发和非HTTPS部署时必须为 false
+    secure: false, 
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 // Session 有效期: 24小时
   }
 }));
-
-// 托管前端静态文件
 app.use(express.static(path.join(__dirname, 'dist')));
-
-// 配置 multer 用于文件上传
 const upload = multer({ dest: 'uploads/' });
+
+// --- 创建一个 API 主路由 ---
+const apiRouter = express.Router();
 
 /*
 ================================================
- API: 认证 (Authentication) - 【新增模块】
+ 1. 公开访问的 API (不需要登录)
 ================================================
 */
-// 登录 API (公开访问)
+// 登录接口
 app.post('/api/login', (req, res) => {
   const { password } = req.body;
   if (password === ADMIN_PASSWORD) {
-    req.session.loggedIn = true; // 在 session 中标记为已登录
+    req.session.loggedIn = true;
     res.status(200).json({ message: "登录成功" });
   } else {
     res.status(401).json({ error: "密码错误" });
   }
 });
 
-// 登出 API (需要登录后才能访问)
-app.post('/api/logout', (req, res) => {
-  req.session.destroy(err => {
-    if (err) return res.status(500).json({ error: "登出失败" });
-    res.clearCookie('connect.sid'); // 清除浏览器中的 session cookie
-    res.status(200).json({ message: "已成功登出" });
+// 检查登录状态接口
+app.get('/api/check-login', (req, res) => {
+  res.status(200).json({ loggedIn: !!req.session.loggedIn });
+});
+
+// 评委端获取当前评分信息接口
+apiRouter.get('/live/current', (req, res) => {
+  if (!currentScoringPlayerId || !activeScoringSetId || activeScoringSetId === '0') {
+    return res.json({ player: null, scoringItems: [] });
+  }
+  const playerSql = "SELECT * FROM players WHERE id = ?";
+  const itemsSql = "SELECT * FROM scoring_items WHERE set_id = ?";
+  db.get(playerSql, [currentScoringPlayerId], (err, player) => {
+    if (err || !player) return res.json({ player: null, scoringItems: [] });
+    db.all(itemsSql, [activeScoringSetId], (err, items) => {
+      if (err) return res.json({ player: player, scoringItems: [] });
+      res.json({ player, scoringItems: items });
+    });
   });
 });
 
-// 检查登录状态 API (公开访问)
-app.get('/api/check-login', (req, res) => {
-    if (req.session.loggedIn) {
-        res.status(200).json({ loggedIn: true });
-    } else {
-        res.status(200).json({ loggedIn: false });
-    }
+// 评委端提交分数接口
+apiRouter.post('/scores', (req, res) => {
+  const { playerId, scores, judgeId } = req.body;
+  if (!playerId || !scores || !Array.isArray(scores) || !judgeId) return res.status(400).json({ error: '请求数据格式不正确' });
+  if (playerId.toString() !== currentScoringPlayerId) return res.status(403).json({ error: '该选手当前的评分通道已关闭' });
+
+  const deleteSql = 'DELETE FROM scores WHERE player_id = ? AND judge_id = ?';
+  const insertSql = `INSERT INTO scores (player_id, item_id, score, judge_id) VALUES (?, ?, ?, ?)`;
+
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION;");
+    db.run(deleteSql, [playerId, judgeId]);
+    scores.forEach(item => {
+      db.run(insertSql, [playerId, item.itemId, item.score, judgeId]);
+    });
+    db.run("COMMIT;", (err) => {
+      if (err) {
+        db.run("ROLLBACK;");
+        return res.status(500).json({ error: "评分提交失败，请重试" });
+      }
+      res.status(201).json({ message: '评分提交/更新成功！' });
+    });
+  });
 });
 
 /*
 ================================================
- 安全中间件 (Security Middleware) - 【新增模块】
+ 2. 安全中间件 (保护下面的所有路由)
 ================================================
 */
 const authMiddleware = (req, res, next) => {
-  // 定义一些即使在 /api 路径下也需要公开访问的接口
-  const publicApiPaths = ['/live/current', '/scores'];
-
-  if (publicApiPaths.some(path => req.path.startsWith(path))) {
-    return next(); // 如果是评委端需要的接口，直接放行
-  }
-  
   if (req.session.loggedIn) {
-    next(); // 已登录，放行
+    next();
   } else {
-    res.status(401).json({ error: '未经授权，请先登录' }); // 未登录，拒绝访问
+    res.status(401).json({ error: '未经授权，请先登录' });
   }
 };
 
-// 【核心】将安全中间件应用到所有 /api 路径下的路由
-// 注意：这个必须放在认证API之后，在所有受保护的API之前
-app.use('/api', authMiddleware);
+// 将安全中间件应用到所有后续的 apiRouter 路由上
+apiRouter.use(authMiddleware);
+
+/*
+================================================
+ 3. 受保护的 API (需要登录才能访问)
+================================================
+*/
+// 登出
+apiRouter.post('/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) return res.status(500).json({ error: "登出失败" });
+    res.clearCookie('connect.sid');
+    res.status(200).json({ message: "已成功登出" });
+  });
+});
 /*
 ================================================
  API: 评分组管理 (Scoring Sets)
@@ -561,6 +590,8 @@ app.delete('/api/results/reset/:playerId', (req, res) => {
     });
   });
 });
+
+app.use('/api', apiRouter);
 
 // SPA "兜底" 路由 - 修正后的兼容性写法
 app.get(/^(?!\/api).*/, (req, res) => {
