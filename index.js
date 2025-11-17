@@ -483,6 +483,14 @@ app.get('/api/my-scores', (req, res) => {
 */
 
 app.get('/api/results', (req, res) => {
+  const { setId } = req.query; // 从查询参数中获取评分组ID
+
+  // 如果前端没有提供 setId，则返回空数组
+  if (!setId) {
+    return res.json({ message: "success", data: [] });
+  }
+
+  // 核心SQL查询，增加了 JOIN 和 WHERE 子句
   const sql = `
     SELECT
       p.id, p.name, p.info,
@@ -490,17 +498,23 @@ app.get('/api/results', (req, res) => {
       IFNULL(SUM(s.score), 0) as total_score
     FROM players p
     LEFT JOIN scores s ON p.id = s.player_id
+    JOIN scoring_items si ON s.item_id = si.id 
+    WHERE si.set_id = ?
     GROUP BY p.id, p.name, p.info
     ORDER BY total_score DESC
   `;
-  db.all(sql, [], (err, rows) => {
+
+  db.all(sql, [setId], (err, rows) => {
     if (err) {
+      console.error("查询分组排名失败:", err.message);
       return res.status(500).json({ "error": err.message });
     }
+    
     const results = rows.map(player => ({
       ...player,
       final_average_score: player.judge_count > 0 ? (player.total_score / player.judge_count).toFixed(2) : 0
     }));
+
     res.json({ message: "success", data: results });
   });
 });
