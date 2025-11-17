@@ -1,0 +1,1 @@
+import{_ as n,c as o,a as r,o as t}from"./index-DZrXHx6s.js";const a={};function s(c,e){return t(),o("main",null,[...e[0]||(e[0]=[r("h1",null,"欢迎来到评分系统后台",-1)])])}const _=n(a,[["render",s]]);export{_ as default};
