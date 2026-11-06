@@ -1,0 +1,89 @@
+/* BlankLayout wraps a judge page that already owns its header and content. */
+.page-wrapper[data-v-22ff8252]:not([data-v-033c4bca]) > .app-header { display: none; }
+.page-wrapper[data-v-22ff8252]:not([data-v-033c4bca]) > .content-area {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+.page-wrapper[data-v-033c4bca] {
+  width: 100%;
+  min-width: 0;
+  font-family: var(--el-font-family);
+}
+.page-wrapper[data-v-033c4bca] > .app-header {
+  height: auto;
+  min-height: 64px;
+  padding: 12px 24px;
+  box-sizing: border-box;
+}
+.page-wrapper[data-v-033c4bca] .header-content {
+  width: 100%;
+  max-width: 960px;
+  min-width: 0;
+  padding: 0;
+  gap: 12px;
+  flex-wrap: wrap;
+  box-sizing: border-box;
+}
+.page-wrapper[data-v-033c4bca] .title {
+  min-width: 0;
+  font-size: 24px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.page-wrapper[data-v-033c4bca] .records-btn {
+  flex-shrink: 0;
+  min-height: 40px;
+  margin: 0;
+}
+.page-wrapper[data-v-033c4bca] > .content-area {
+  width: 100%;
+  min-width: 0;
+  padding: 24px;
+  align-items: flex-start;
+  box-sizing: border-box;
+}
+.page-wrapper[data-v-033c4bca] .judge-card.el-card {
+  width: 100%;
+  max-width: 960px;
+  min-width: 0;
+  margin: 0;
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+.page-wrapper[data-v-033c4bca] .judge-card > .el-card__body { padding: 28px; }
+.page-wrapper[data-v-033c4bca] .judge-card h3 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.page-wrapper[data-v-033c4bca] .player-info,
+.page-wrapper[data-v-033c4bca] .item-desc { overflow-wrap: anywhere; line-height: 1.6; }
+.page-wrapper[data-v-033c4bca] .item-header { gap: 12px; align-items: flex-start; }
+.page-wrapper[data-v-033c4bca] .item-name { min-width: 0; overflow-wrap: anywhere; }
+.page-wrapper[data-v-033c4bca] .item-score { flex-shrink: 0; white-space: nowrap; }
+.page-wrapper[data-v-033c4bca] .status-box { padding: 32px 0; }
+.page-wrapper[data-v-033c4bca] .submit-btn { margin-top: 8px; min-height: 48px; }
+
+@media (max-width: 600px) {
+  .page-wrapper[data-v-033c4bca] > .app-header {
+    min-height: 60px;
+    padding: 10px max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left));
+  }
+  .page-wrapper[data-v-033c4bca] .header-content { gap: 8px; }
+  .page-wrapper[data-v-033c4bca] .title { font-size: 20px; }
+  .page-wrapper[data-v-033c4bca] .records-btn { min-height: 40px; padding: 10px; font-size: 13px; }
+  .page-wrapper[data-v-033c4bca] > .content-area {
+    padding: 12px max(12px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  }
+  .page-wrapper[data-v-033c4bca] .judge-card > .el-card__body { padding: 20px 18px; }
+  .page-wrapper[data-v-033c4bca] .judge-card h3 { font-size: 20px; }
+  .page-wrapper[data-v-033c4bca] .player-info { margin: 8px 0; font-size: 14px; }
+  .page-wrapper[data-v-033c4bca] .el-divider--horizontal { margin: 20px 0; }
+  .page-wrapper[data-v-033c4bca] .scoring-item { margin-bottom: 22px; }
+  .page-wrapper[data-v-033c4bca] .el-slider { min-height: 44px; }
+  .page-wrapper[data-v-033c4bca] .submit-btn { height: 48px; font-size: 17px; }
+}

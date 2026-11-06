@@ -34,7 +34,7 @@ function createTables() {
         FOREIGN KEY (set_id) REFERENCES scoring_sets (id) ON DELETE CASCADE
       )`
     );
-    
+
     // 分数表 (依赖于选手和评分项)
     db.run(`
       CREATE TABLE IF NOT EXISTS scores (

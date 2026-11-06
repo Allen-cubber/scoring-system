@@ -1,5 +1,52 @@
 # 线上打分系统 (Online Scoring System)
 
+## 当前版本：本机一键启动
+
+### Render 部署配置
+
+现有 Render 服务应连接本仓库 `https://github.com/Allen-cubber/scoring-system`，并使用以下设置：
+
+| 设置项 | 值 |
+| --- | --- |
+| Branch | `main` |
+| Root Directory | 留空（不要填写 `scoring-system`） |
+| Runtime | Node |
+| Build Command | `npm ci --omit=dev` |
+| Start Command | `node index.js` |
+
+保存设置后执行 **Manual Deploy → Deploy latest commit**。后台访问 `/`，评委访问 `/judge`。
+
+Root Directory 是仓库内部的目录，不是仓库名称；本仓库的 `package.json`、`index.js` 和 `dist` 都在根目录。
+
+Render 免费服务的本地文件系统不提供数据库持久化保障。当前 SQLite 版本的比赛数据可能在重启或重新部署后丢失，正式成绩需要备份或迁移到持久化数据库。
+
+### Windows 本机运行
+
+本仓库根目录就是评分系统。已包含打包后的前端 `dist`，无需重新打包前端。
+
+首次使用安装 Node.js 22 LTS，在本目录执行：
+
+```powershell
+npm ci
+```
+
+Windows 用户随后双击本目录的 **评分服务启动器.exe**，即可启动评分服务、打开后台并复制手机评委访问链接。EXE 需要与整个项目目录一起保留。也可以直接执行：
+
+```powershell
+node index.js
+```
+
+- 管理后台：`http://localhost:3000`
+- 本机评委页面：`http://localhost:3000/judge`
+- 手机评委页面：`http://电脑当前IP:3000/judge`，需要手机与电脑网络互通。
+- 数据库首次运行时生成；比赛数据库、日志和依赖目录不包含在仓库中。
+- 启动器源码及构建脚本：`launcher/ScoringLauncher.cs`、`launcher/build.ps1`。
+- 完整操作说明、固定访问地址建议和已知问题：[使用说明与升级建议](使用说明与升级建议.md)。
+
+本次更新加入了后台首页使用手册、手机评分页自适应布局、评分控制台高度优化和悬浮提示，以及 Windows 一键启动器。目前未实现固定域名／隧道服务；评分接口鉴权、分数校验等已知问题见上述说明。
+
+以下保留原项目说明，其中前端开发步骤需要另外取得原始 Vue 源码；当前仓库仅包含前端打包产物。
+
 这是一个轻量级、功能完整的全栈线上打分系统。它允许管理员设置比赛、导入选手和评分标准，并让大众评委通过链接实时为选手打分。后台会自动统计排名。
 
 该项目采用前后端分离的开发模式和一体化部署策略。

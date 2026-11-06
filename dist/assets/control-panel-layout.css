@@ -1,0 +1,68 @@
+/* Keep both panels within the available desktop viewport; scroll the tables. */
+.control-panel[data-v-7ba1c7b8] {
+  --control-card-height: clamp(340px, calc(100vh - 112px), 800px);
+  --control-card-height: clamp(340px, calc(100dvh - 112px), 800px);
+  row-gap: 16px;
+}
+.control-panel[data-v-7ba1c7b8] > .el-col > .el-card {
+  display: flex;
+  flex-direction: column;
+  height: var(--control-card-height);
+  min-width: 0;
+  box-sizing: border-box;
+}
+.control-panel[data-v-7ba1c7b8] .el-card__header { flex: 0 0 auto; padding: 14px 16px; }
+.control-panel[data-v-7ba1c7b8] .el-card__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 16px;
+}
+.control-panel[data-v-7ba1c7b8] .el-card__body > .el-table { flex: 1 1 0; min-height: 0; }
+.control-panel[data-v-7ba1c7b8] .el-card__body > .el-button { flex-shrink: 0; min-height: 36px; }
+.control-panel[data-v-7ba1c7b8] .card-header { gap: 12px; flex-wrap: wrap; }
+.control-panel[data-v-7ba1c7b8] .card-header > .el-select { max-width: 100%; }
+.control-panel[data-v-7ba1c7b8] .empty-state {
+  height: auto;
+  min-height: 160px;
+  flex: 1;
+  padding: 16px;
+  text-align: center;
+  line-height: 1.6;
+  box-sizing: border-box;
+}
+
+/* This Element Plus message is teleported to body, outside the table layout. */
+.el-message.control-group-notice {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 14px 18px;
+  box-sizing: border-box;
+  border: 1px solid #f3d19e;
+  border-radius: 10px;
+  background: #fff8eb;
+  color: #925900;
+  box-shadow: 0 6px 24px #0000001f;
+  font-family: var(--el-font-family);
+  pointer-events: auto;
+}
+.control-group-notice .el-message__content { margin: 0; min-width: 0; font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; }
+.control-group-notice .el-message__icon { flex-shrink: 0; font-size: 20px; }
+.control-group-notice .el-message__closeBtn { flex-shrink: 0; margin-left: 6px; width: 28px; height: 28px; cursor: pointer; color: #925900; }
+.control-group-notice .el-message__badge { position: absolute; top: -8px; right: -8px; }
+.control-group-notice.el-message-fade-enter-active,
+.control-group-notice.el-message-fade-leave-active { transition: opacity .18s, transform .18s; }
+.control-group-notice.el-message-fade-enter-from,
+.control-group-notice.el-message-fade-leave-to { opacity: 0; transform: translate(-50%, -12px); }
+
+@media (max-width: 1000px) {
+  .control-panel[data-v-7ba1c7b8] > .el-col { max-width: 100%; flex: 0 0 100%; }
+  .control-panel[data-v-7ba1c7b8] { --control-card-height: clamp(340px, 65vh, 560px); }
+}

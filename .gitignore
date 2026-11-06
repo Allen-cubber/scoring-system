@@ -1,7 +1,23 @@
-# Dependencies
-/node_modules
+# Installed dependencies and optional local runtime
+/node_modules/
+/runtime/
 
-# Temp files
-/uploads
+# Match data and generated files
+/uploads/
+/logs/
+/backups/
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
 *.log
+*.pid
+/launcher/run-server.cmd
+/launcher/launcher-preview.png
+
+# Local credentials and editor files
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db

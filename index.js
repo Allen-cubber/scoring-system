@@ -17,10 +17,10 @@ const PORT = 3000;
 
 // 4. 【核心修复】配置并使用中间件
 // 确保 cors() 在所有路由之前被调用，这是解决 DELETE/PUT 问题的关键！
-app.use(cors()); 
+app.use(cors());
 
 // 解析 JSON 格式的请求体
-app.use(express.json()); 
+app.use(express.json());
 
 // --- 【新增代码块 1】---
 // 托管前端静态文件。这行代码告诉 Express，
@@ -80,8 +80,8 @@ app.post('/api/scoring-sets/import', upload.single('scoringFile'), async (req, r
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     // 将Excel转换为JSON，指定表头映射
-    importedRows = xlsx.utils.sheet_to_json(sheet, { 
-      header: ['setName', 'itemName', 'description', 'maxScore'] 
+    importedRows = xlsx.utils.sheet_to_json(sheet, {
+      header: ['setName', 'itemName', 'description', 'maxScore']
     });
 
   } catch (error) {
@@ -126,7 +126,7 @@ app.post('/api/scoring-sets/import', upload.single('scoringFile'), async (req, r
       if (row.setName && row.itemName && row.maxScore) {
         // 获取或创建评分组ID
         const setId = await getOrCreateSetId(row.setName);
-        
+
         // 插入评分项
         const itemSql = `INSERT INTO scoring_items (name, description, max_score, set_id) VALUES (?, ?, ?, ?)`;
         // 使用 db.run 的回调来捕获可能的错误
@@ -196,7 +196,7 @@ app.put('/api/scoring-items/:id', (req, res) => {
 app.delete('/api/scoring-items/:id', (req, res) => {
   const id = req.params.id;
   const sql = 'DELETE FROM scoring_items WHERE id = ?';
-  
+
   db.run(sql, [id], function(err) { // 【检查点1】确保 id 被放在一个数组里 [id]
     if (err) {
       console.error(`删除评分项失败 (ID: ${id}):`, err.message);
@@ -227,7 +227,7 @@ app.post('/api/players', (req, res) => {
 
   const sql = 'INSERT INTO players (name, info) VALUES (?, ?)';
   // 如果 info 未提供，则存入空字符串
-  const params = [name, info || '']; 
+  const params = [name, info || ''];
 
   db.run(sql, params, function(err) {
     if (err) {
@@ -258,13 +258,13 @@ app.post('/api/players/import', upload.single('playersFile'), (req, res) => {
   try {
     // 1. 使用 xlsx 库读取上传的文件
     const workbook = xlsx.readFile(filePath);
-    
+
     // 2. 获取第一个工作表 (Sheet) 的名称
     const sheetName = workbook.SheetNames[0];
-    
+
     // 3. 获取该工作表
     const sheet = workbook.Sheets[sheetName];
-    
+
     // 4. 将工作表内容转换为 JSON 数组
     //    我们假设 Excel 文件没有表头，A列是姓名，B列是简介
     players = xlsx.utils.sheet_to_json(sheet, { header: ['name', 'info'] });
@@ -292,9 +292,9 @@ app.post('/api/players/import', upload.single('playersFile'), (req, res) => {
   // 6. 删除临时的上传文件
   fs.unlinkSync(filePath);
 
-  res.status(201).json({ 
+  res.status(201).json({
     message: '选手导入成功',
-    count: players.length 
+    count: players.length
   });
 });
 
@@ -375,7 +375,7 @@ app.get('/api/live/current', (req, res) => {
   }
   const playerSql = "SELECT * FROM players WHERE id = ?";
   const itemsSql = "SELECT * FROM scoring_items WHERE set_id = ?"; // 查询语句已修改
-  
+
   db.get(playerSql, [currentScoringPlayerId], (err, player) => {
     if (err) return res.status(500).json({ "error": err.message });
     if (!player) return res.status(404).json({ "error": "找不到该选手" });
@@ -426,7 +426,7 @@ app.post('/api/scores', (req, res) => {
         console.error("提交分数事务失败:", err.message);
         return res.status(500).json({ error: "评分提交失败，请重试" });
       }
-      
+
       // 事务成功提交
       res.status(201).json({ message: '评分提交/更新成功！' });
     });
@@ -459,7 +459,7 @@ app.get('/api/my-scores', (req, res) => {
       console.error("查询打分记录失败:", err.message);
       return res.status(500).json({ error: "数据库查询失败" });
     }
-    
+
     // 将查询结果按选手名格式化，方便前端展示
     const formattedResults = {};
     rows.forEach(row => {
@@ -498,7 +498,7 @@ app.get('/api/results', (req, res) => {
       IFNULL(SUM(s.score), 0) as total_score
     FROM players p
     LEFT JOIN scores s ON p.id = s.player_id
-    JOIN scoring_items si ON s.item_id = si.id 
+    JOIN scoring_items si ON s.item_id = si.id
     WHERE si.set_id = ?
     GROUP BY p.id, p.name, p.info
     ORDER BY total_score DESC
@@ -509,7 +509,7 @@ app.get('/api/results', (req, res) => {
       console.error("查询分组排名失败:", err.message);
       return res.status(500).json({ "error": err.message });
     }
-    
+
     const results = rows.map(player => ({
       ...player,
       final_average_score: player.judge_count > 0 ? (player.total_score / player.judge_count).toFixed(2) : 0
@@ -532,7 +532,7 @@ app.delete('/api/results/reset/:playerId', (req, res) => {
   db.run(sql, [playerId], function(err) {
     if (err) {
       // 这一行会在你的后端控制台打印出详细错误
-      console.error("重置评分失败:", err.message); 
+      console.error("重置评分失败:", err.message);
       return res.status(500).json({ error: "数据库操作失败" });
     }
 
@@ -541,10 +541,10 @@ app.delete('/api/results/reset/:playerId', (req, res) => {
     } else {
       console.log(`已成功重置选手 ${playerId} 的 ${this.changes} 条评分记录。`);
     }
-    
-    res.json({ 
-      message: "重置成功", 
-      deleted_count: this.changes 
+
+    res.json({
+      message: "重置成功",
+      deleted_count: this.changes
     });
   });
 });

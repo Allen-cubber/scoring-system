@@ -1,0 +1,27 @@
+.home-page { max-width: 1200px; margin: 0 auto; }
+.home-page > h1 { margin: 0 0 26px; line-height: 1.4; }
+.home-manual { color: #303133; line-height: 1.8; text-align: left; }
+.home-manual__header { padding: 24px 28px; border: 1px solid #d9e7f8; border-radius: 12px; background: #f0f6ff; }
+.home-manual__eyebrow { color: #337ecc; font-size: 13px; font-weight: 600; }
+.home-manual__header h2 { margin: 4px 0 8px; font-size: 24px; line-height: 1.4; }
+.home-manual__header p { margin: 0; color: #606266; }
+.home-manual__steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; padding: 0; margin: 22px 0; list-style: none; }
+.home-manual__step { display: flex; flex-direction: column; padding: 24px; border: 1px solid #e4e7ed; border-radius: 12px; background: #fff; min-width: 0; }
+.home-manual__step-heading { display: flex; align-items: center; gap: 12px; }
+.home-manual__number { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px; background: #ecf5ff; color: #337ecc; font-weight: 700; }
+.home-manual__step h3 { margin: 0; font-size: 18px; line-height: 1.5; }
+.home-manual__step p { margin: 14px 0 0; overflow-wrap: anywhere; }
+.home-manual__step .home-manual__tip { margin-bottom: 16px; color: #606266; font-size: 14px; }
+.home-manual__link { align-self: flex-start; margin-top: auto; color: #2469b2; font-size: 14px; font-weight: 600; text-decoration: none; }
+.home-manual__link:hover { text-decoration: underline; }
+.home-manual__link:focus-visible, .home-manual summary:focus-visible { outline: 2px solid #409eff; outline-offset: 4px; border-radius: 3px; }
+.home-manual__faq { padding: 24px 28px; border: 1px solid #e4e7ed; border-radius: 12px; background: #fff; margin-bottom: 28px; }
+.home-manual__faq h3 { margin: 0 0 12px; font-size: 20px; }
+.home-manual__faq details + details { border-top: 1px solid #ebeef5; }
+.home-manual__faq summary { padding: 14px 0; cursor: pointer; font-weight: 600; }
+.home-manual__faq p { margin: 0 0 16px; color: #606266; overflow-wrap: anywhere; }
+@media (max-width: 1000px) { .home-manual__steps { grid-template-columns: 1fr; } }
+@media (max-width: 600px) {
+  .home-page > h1 { font-size: 24px; }
+  .home-manual__header, .home-manual__step, .home-manual__faq { padding: 18px; }
+}
